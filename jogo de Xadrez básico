@@ -1,0 +1,197 @@
+# Desafio-Xadrez
+ jogo de Xadrez básico em linguagem C, perfeito para praticar programação com matrizes, estruturas e lógica de jogos!
+
+#include <stdio.h>
+#include <stdbool.h>
+#include <ctype.h>
+
+#define TAM 8
+
+// Cores para as peças
+#define VERMELHO "\x1B[31m"
+#define VERDE "\x1B[32m"
+#define RESET "\x1B[0m"
+
+// Tipos de peças
+typedef enum {
+    VAZIO,
+    PEAO,
+    TORRE,
+    REI
+} TipoPeca;
+
+// Cores das peças
+typedef enum {
+    BRANCO,
+    PRETO
+} Cor;
+
+// Estrutura para uma peça
+typedef struct {
+    TipoPeca tipo;
+    Cor cor;
+} Peca;
+
+// Tabuleiro global
+Peca tabuleiro[TAM][TAM];
+
+// Inicializa o tabuleiro
+void inicializarTabuleiro() {
+    // Preenche com espaços vazios
+    for (int i = 0; i < TAM; i++) {
+        for (int j = 0; j < TAM; j++) {
+            tabuleiro[i][j].tipo = VAZIO;
+        }
+    }
+
+    // Peões brancos
+    for (int j = 0; j < TAM; j++) {
+        tabuleiro[1][j].tipo = PEAO;
+        tabuleiro[1][j].cor = BRANCO;
+    }
+
+    // Peões pretos
+    for (int j = 0; j < TAM; j++) {
+        tabuleiro[6][j].tipo = PEAO;
+        tabuleiro[6][j].cor = PRETO;
+    }
+
+    // Torres brancas
+    tabuleiro[0][0].tipo = TORRE;
+    tabuleiro[0][7].tipo = TORRE;
+    tabuleiro[0][0].cor = BRANCO;
+    tabuleiro[0][7].cor = BRANCO;
+
+    // Torres pretas
+    tabuleiro[7][0].tipo = TORRE;
+    tabuleiro[7][7].tipo = TORRE;
+    tabuleiro[7][0].cor = PRETO;
+    tabuleiro[7][7].cor = PRETO;
+
+    // Reis
+    tabuleiro[0][4].tipo = REI;
+    tabuleiro[0][4].cor = BRANCO;
+    tabuleiro[7][4].tipo = REI;
+    tabuleiro[7][4].cor = PRETO;
+}
+
+// Exibe o tabuleiro
+void exibirTabuleiro() {
+    printf("\n   a b c d e f g h\n");
+    for (int i = 0; i < TAM; i++) {
+        printf("%d ", 8 - i);
+        for (int j = 0; j < TAM; j++) {
+            if (tabuleiro[i][j].tipo == VAZIO) {
+                printf(". ");
+            } else {
+                char peca;
+                switch (tabuleiro[i][j].tipo) {
+                    case PEAO: peca = 'P'; break;
+                    case TORRE: peca = 'T'; break;
+                    case REI: peca = 'R'; break;
+                    default: peca = '?';
+                }
+
+                if (tabuleiro[i][j].cor == BRANCO) {
+                    printf(VERDE "%c " RESET, peca);
+                } else {
+                    printf(VERMELHO "%c " RESET, peca);
+                }
+            }
+        }
+        printf("%d\n", 8 - i);
+    }
+    printf("   a b c d e f g h\n");
+}
+
+// Verifica se um movimento é válido
+bool movimentoValido(int xOrigem, int yOrigem, int xDestino, int yDestino) {
+    // Verifica se está dentro do tabuleiro
+    if (xOrigem < 0 || xOrigem >= TAM || yOrigem < 0 || yOrigem >= TAM ||
+        xDestino < 0 || xDestino >= TAM || yDestino < 0 || yDestino >= TAM) {
+        return false;
+    }
+
+    Peca origem = tabuleiro[xOrigem][yOrigem];
+    Peca destino = tabuleiro[xDestino][yDestino];
+
+    // Não pode mover peça vazia
+    if (origem.tipo == VAZIO) return false;
+
+    // Não pode capturar peça da mesma cor
+    if (destino.tipo != VAZIO && destino.cor == origem.cor) return false;
+
+    // Regras de movimento
+    switch (origem.tipo) {
+        case PEAO:
+            // Peão só move para frente
+            if (origem.cor == BRANCO) {
+                if (xDestino != xOrigem + 1) return false;
+            } else {
+                if (xDestino != xOrigem - 1) return false;
+            }
+            // Peão só captura na diagonal
+            if (destino.tipo != VAZIO && yDestino == yOrigem) return false;
+            if (destino.tipo == VAZIO && yDestino != yOrigem) return false;
+            break;
+
+        case TORRE:
+            // Torre move em linha reta
+            if (xOrigem != xDestino && yOrigem != yDestino) return false;
+            break;
+
+        case REI:
+            // Rei move uma casa em qualquer direção
+            if (abs(xDestino - xOrigem) > 1 || abs(yDestino - yOrigem) > 1) return false;
+            break;
+
+        default:
+            return false;
+    }
+
+    return true;
+}
+
+// Converte coordenadas como "e2" para índices da matriz
+bool converterCoordenadas(char* entrada, int* x, int* y) {
+    if (strlen(entrada) != 2) return false;
+
+    *y = tolower(entrada[0]) - 'a';
+    *x = '8' - entrada[1];
+
+    return (*x >= 0 && *x < TAM && *y >= 0 && *y < TAM);
+}
+
+int main() {
+    inicializarTabuleiro();
+    bool vezJogador = true;
+
+    while (true) {
+        exibirTabuleiro();
+
+        if (vezJogador) {
+            printf("\nSua vez (ex: e2 e4): ");
+            char entrada[10];
+            scanf("%s", entrada);
+
+            int xOrigem, yOrigem;
+            if (!converterCoordenadas(entrada, &xOrigem, &yOrigem)) {
+                printf("Coordenada inválida!\n");
+                continue;
+            }
+
+            scanf("%s", entrada);
+            int xDestino, yDestino;
+            if (!converterCoordenadas(entrada, &xDestino, &yDestino)) {
+                printf("Coordenada inválida!\n");
+                continue;
+            }
+
+            if (!movimentoValido(xOrigem, yOrigem, xDestino, yDestino)) {
+                printf("Movimento inválido!\n");
+                continue;
+            }
+
+            // Executa o movimento
+            tabuleiro[xDestino][yDestino] = tabuleiro[xOrigem][yOrigem];
+            tabuleiro[xOrigem][yOrigem].t
